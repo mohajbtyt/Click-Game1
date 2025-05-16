@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>لعبة النقرة - JBT_YTT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial;
+      background: #121212;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+    }
+    button {
+      font-size: 18px;
+      margin: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background-color: #2196F3;
+      color: white;
+      cursor: pointer;
+    }
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    #missionsBox {
+      display: none;
+      background: #222;
+      border: 1px solid #555;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: left;
+      max-width: 400px;
+      margin: 10px auto;
+    }
+    #missionsBox ul {
+      padding-left: 20px;
+    }
+    .click-effect {
+      position: absolute;
+      color: yellow;
+      font-size: 20px;
+      pointer-events: none;
+      animation: fadeMove 1s forwards;
+    }
+    @keyframes fadeMove {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-30px); }
+    }
+  </style>
+</head>
+<body onclick="handleBodyClick(event)">
+  <div class="top-bar">
+    <button onclick="toggleMissions()">المهام اليومية</button>
+    <div>
+      الاسم: <span id="playerName">---</span>
+      <button onclick="changeName()">تغيير الاسم</button>
+    </div>
+  </div>
+
+  <div id="missionsBox">
+    <h4>المهام:</h4>
+    <ul id="missionsList"></ul>
+  </div>
+
+  <h1>لعبة النقرة</h1>
+  <h2>النقاط: <span id="points">0</span></h2>
+  <h3>المرحلة: <span id="level">1</span></h3>
+  <button onclick="incrementClick()">اضغط لجمع النقاط</button>
+  <button onclick="buyMultiplier()">شراء مضاعف (<span id="multiplierCost">50</span>)</button>
+  <button onclick="resetGame()">إعادة</button>
+
+  <div style="margin-top: 20px; background: #1b1b1b; padding: 15px; border-radius: 10px;">
+    <h3>لوحة المتصدرين</h3>
+    <ol id="leaderboard">
+      <li><strong>JBT_YTT</strong>: ∞ نقاط</li>
+    </ol>
+  </div>
+
+  <script>
+    let points = 0, multiplier = 1, multiplierCost = 50, level = 1;
+    let playerName = localStorage.getItem("playerName") || "";
+
+    const playerNameEl = document.getElementById("playerName");
+    const pointsEl = document.getElementById("points");
+    const levelEl = document.getElementById("level");
+    const multiplierCostEl = document.getElementById("multiplierCost");
+
+    function updateUI() {
+      pointsEl.innerText = Math.floor(points);
+      levelEl.innerText = level;
+      multiplierCostEl.innerText = multiplierCost;
+      playerNameEl.innerText = playerName || "---";
+    }
+
+    function promptForName() {
+      let name = prompt("أدخل اسمك (لا يمكن تكرار الاسم):");
+      if (!name || name.trim() === "") return promptForName();
+      if (name === "JBT_YTT" || localStorage.getItem("name_" + name)) {
+        alert("الاسم مأخوذ، اختر اسمًا آخر.");
+        return promptForName();
+      }
+      playerName = name;
+      localStorage.setItem("playerName", name);
+      localStorage.setItem("name_" + name, true);
+      updateUI();
+    }
+
+    function changeName() {
+      localStorage.removeItem("name_" + playerName);
+      localStorage.removeItem("playerName");
+      promptForName();
+    }
+
+    function incrementClick() {
+      points += multiplier;
+      checkLevel();
+      updateUI();
+      updateLeaderboard();
+    }
+
+    function handleBodyClick(e) {
+      if (!e.target.closest("button")) {
+        incrementClick();
+        showClickEffect(e.clientX, e.clientY);
+      }
+    }
+
+    function showClickEffect(x, y) {
+      const el = document.createElement("div");
+      el.className = "click-effect";
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.textContent = "+" + multiplier;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }
+
+    function buyMultiplier() {
+      if (points >= multiplierCost) {
+        points -= multiplierCost;
+        multiplier++;
+        multiplierCost = Math.floor(multiplierCost * 1.8);
+        updateUI();
+      }
+    }
+
+    function checkLevel() {
+      const thresholds = [100, 500, 1000, 5000, 10000, 25000, 100000];
+      for (let i = thresholds.length - 1; i >= 0; i--) {
+        if (points >= thresholds[i]) {
+          level = i + 2;
+          return;
+        }
+      }
+      level = 1;
+    }
+
+    function resetGame() {
+      if (confirm("هل أنت متأكد؟")) {
+        points = 0; multiplier = 1; multiplierCost = 50; level = 1;
+        updateUI();
+      }
+    }
+
+    function toggleMissions() {
+      const box = document.getElementById("missionsBox");
+      box.style.display = box.style.display === "none" ? "block" : "none";
+      updateMissions();
+    }
+
+    function updateMissions() {
+      const missions = [
+        { text: "احصل على 100 نقطة", value: 100 },
+        { text: "اشترِ 3 مضاعفات", value: 3, type: "multiplier" },
+        { text: "افتح المرحلة 4", value: 4, type: "level" },
+      ];
+      const ul = document.getElementById("missionsList");
+      ul.innerHTML = "";
+      missions.forEach(m => {
+        let achieved = false;
+        if (!m.type) achieved = points >= m.value;
+        else if (m.type === "multiplier") achieved = multiplier > m.value;
+        else if (m.type === "level") achieved = level >= m.value;
+        const li = document.createElement("li");
+        li.innerText = `${m.text} - ${achieved ? "✓" : "❌"}`;
+        ul.appendChild(li);
+      });
+    }
+
+    function updateLeaderboard() {
+      const lb = document.getElementById("leaderboard");
+      if (!lb) return;
+      let scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+      if (playerName !== "JBT_YTT") {
+        const existing = scores.find(s => s.name === playerName);
+        if (existing) existing.score = Math.max(existing.score, Math.floor(points));
+        else scores.push({ name: playerName, score: Math.floor(points) });
+      }
+      scores.sort((a, b) => b.score - a.score);
+      scores = scores.slice(0, 99);
+      lb.innerHTML = '<li><strong>JBT_YTT</strong>: ∞ نقاط</li>' +
+        scores.map(s => `<li>${s.name}: ${s.score} نقاط</li>`).join("");
+      localStorage.setItem("leaderboard", JSON.stringify(scores));
+    }
+
+    if (!playerName) promptForName();
+    updateUI();
+    updateLeaderboard();
+  </script>
+</body>
+</html>
